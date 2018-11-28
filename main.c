@@ -1,19 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <GL/glut.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include "config.h"
+#include "objects.h"
 
 
 #define TIMERMSECS 20
-#define TRARATE 0.2f
+#define TRARATE 2
 
 //Uslov za kretanje animacije
-int m=1;
-//Duzina nivoa
-int gameLength= 1000;
-
+static int m=1;
 // Promenljiva za kretanje po z osi
 static GLfloat tra = 0.0f;
 // Promenljive za kretanje po x i y osi
@@ -22,9 +15,10 @@ static GLfloat movY = 3.0f;
 
 static int i=0;
 
-// Quadric objekat
-GLUquadricObj *IDquadric;
-float rmatrix[100][100][100];
+
+//Prepreke
+ObjectPosition op[1000];
+
 
 // Callback funkcije
 static void on_keyboard(unsigned char key, int x, int y);
@@ -32,26 +26,27 @@ static void on_reshape(int width, int height);
 static void on_timer(int value);
 static void on_display(void);
 
-void triangularPrism();
+
+
 int main(int argc, char **argv)
 {
 
     //Osvetljenje
-    GLfloat light_ambient[] = { 0.8, 0.5f, 0.0f, 1 };
-    GLfloat light_diffuse[] = { 1, 1, 1, 1 };
-    GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1 };
-    GLfloat model_ambient[] = { 0.1, 0, 0, 1 };
-    GLfloat light_position[] = { -0.2f, -0.2f, -0.2f, -0.5f };
+    GLfloat light_ambient[] = { 0.2f, 0.2f, 0.2f, 1 };
+    GLfloat light_diffuse[] = { 0.8f, 0.8f, 0.8f, 1 };
+    GLfloat light_specular[] = { 1, 1, 1, 1 };
+    //GLfloat model_ambient[] = { 0.1, 0, 0, 1 };
+    GLfloat light_position[] = { 0.5, 1, 0.5, 1 };
 
-     //Quadric Objekat
-    IDquadric=gluNewQuadric();
 
-    //Punimo matricu 100x100x100 sa random vrednostima
-    int jj=0,ii=0,kk=0;
-    for(jj=0;jj<100;jj++)
-        for(ii=0;ii<100;ii++)
-            for(kk=0;kk<100;kk++)
-                rmatrix[jj][ii][kk] = -500 + rand() % 1000;
+    //Punimo strukturu koja generise prepreke
+    int jj= 0;
+    for (jj=0;jj<1000;jj++)
+        {
+            op[jj].x =  -250 + rand() % 500;
+            op[jj].y =  -250 + rand() % 500;
+            op[jj].z = -500 + rand() % 10000;
+        }
 
     
     glutInit(&argc, argv);
@@ -64,13 +59,15 @@ int main(int argc, char **argv)
     glutKeyboardFunc(on_keyboard);
     glutReshapeFunc(on_reshape);
     glutDisplayFunc(on_display);
+ 
 
-
-    glClearColor(0, 0, 0.5f, 0);
+    glClearColor(0, 0, 0.94f, 0);
     glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     // Postavlja se tajmer
     glutTimerFunc(TIMERMSECS, on_timer, 0);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
     // Postavlja se osvetljenje
     glEnable(GL_LIGHTING);
@@ -78,7 +75,7 @@ int main(int argc, char **argv)
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
     glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
+    //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
     glutMainLoop();
@@ -91,20 +88,42 @@ static void on_keyboard(unsigned char key, int x, int y)
     switch (key) {
     case 27:
         // Zavrsava se program
+        
+        printf("MovX = %f ,  MovY = %f  \n ", movX,movY);
         exit(0);
         break;
 
     case 'd':
+            if(movX>=175)
+            {
+                movX=175;
+                break;
+            }
             movX+=2.5;
             break;
     case 'a':
+            if(movX<=-175)
+            {
+                movX=-175;
+                break;
+            }
             movX-=2.5;
             break;
         break;
     case 'w':
+            if(movY>=175)
+            {
+                movY=175;
+                break;
+            }
             movY+=2.5;
             break;
     case 's':
+            if(movY<=-175)
+            {
+                movY=-175;
+                break;
+            }
             movY-=2.5;
             break;
 
@@ -138,15 +157,6 @@ static void on_reshape(int width, int height)
 
 static void on_display(void)
 {
-
-    //Parametri
-    GLfloat ambients[] = { 0, 0, 0, 1 };
-    GLfloat shininess = 5;
-    GLfloat cill[] = { 1, 1, 1, 0.1 };
-    GLfloat head[] = { 1, 0, 0, 0 };
-    GLfloat objec[] = { 0.37, 0.8, 0.16, 1 };
-    //GLfloat cloud[] = { 0.52, 0.8, 0.92, 1 };
-
     // Postavlja se boja
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -155,87 +165,22 @@ static void on_display(void)
     glLoadIdentity();
     gluLookAt(movX, movY, gameLength-tra, 0, 0, 0, 0, 1, 0);
 
-    
+
+
     // Crtamo 100 objekata koji ce biti prepreka
-    for (i = 0; i < 100; i++) {
-            glPushMatrix();
-            glMaterialfv(GL_FRONT_FACE, GL_AMBIENT, ambients);
-            glMaterialfv(GL_FRONT_FACE, GL_DIFFUSE, objec);
-            glTranslatef(rmatrix[i][0][0],rmatrix[0][i][0],rmatrix[0][0][i]);
-            glutSolidCube(20);
-            glPopMatrix();
+    for (i = 0; i < 1000; i++) {
+                drawObstacle(op[i]);
                 }
 
 
-
-    //Ovde ce biti kod za oblake
-    /*
-    for(l=0;l<=2;l++){    
-        glPushMatrix();
-            glMaterialfv(GL_BACK, GL_AMBIENT, ambients);
-            glMaterialfv(GL_BACK, GL_DIFFUSE, cloud);
-            glMaterialf(GL_FRONT, GL_SHININESS, shininess);
-
-          //  glTranslatef(p,0,l);
-            glScalef(1,1,2);
-            glutSolidSphere(30,30,20);
-        glPopMatrix();
-        glPushMatrix();
-            glTranslatef(25,0,0);
-            glMaterialfv(GL_BACK, GL_AMBIENT, ambients);
-            glMaterialfv(GL_BACK, GL_DIFFUSE, cloud);
-            glMaterialf(GL_FRONT, GL_SHININESS, shininess);
-
-          //  glTranslatef(p,0,l);
-            glutSolidSphere(30,30,20);
-        glPopMatrix();
-        glPushMatrix();
-            glTranslatef(0,25,0);
-            glMaterialfv(GL_BACK, GL_AMBIENT, ambients);
-            glMaterialfv(GL_BACK, GL_DIFFUSE, cloud);
-            glMaterialf(GL_FRONT, GL_SHININESS, shininess);
-
-          //  glTranslatef(p,0,l);
-            glutSolidSphere(30,30,20);
-        glPopMatrix();
-    }
-    */
-
-
+    //Pomeramo raketu
     glTranslatef(0,0,-tra);
-
     glTranslatef(0, movY, 0);
     glTranslatef(movX,0,0);
 
-
     // Crtamo raketu
-    glTranslatef(0,0,gameLength-50);
-    glRotatef(-105,1,0,0);
-    glPushMatrix();
-        glMaterialfv(GL_FRONT, GL_AMBIENT, ambients);
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, head);
-        glMaterialf(GL_FRONT, GL_SHININESS, shininess);
-        glRotatef(-90,1,0,0);
-        glutSolidCone(5,5,25,10);
-        glPushMatrix();
-       // glTranslatef(0,-40,0);
-            glMaterialfv(GL_FRONT, GL_AMBIENT, ambients);
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, cill);
-            glMaterialf(GL_FRONT, GL_SHININESS, shininess);
-
-            glRotatef(270,1,0,0);
-            
-            glRotatef(-90,1,0,0);
-            gluCylinder(IDquadric,5.0f,5.0f,20.0f,32,32);
-            glPopMatrix();
-
-
-    glPopMatrix();
-
+    drawRocket();
 
     // Postavlja se nova slika u prozor 
     glutSwapBuffers();
-}
-int randomC(int min, int max){
-   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
