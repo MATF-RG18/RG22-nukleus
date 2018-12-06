@@ -9,8 +9,10 @@
     GLfloat ambRocketBody[] = { 1, 1, 1, 1 };
     GLfloat ambRocketBottom[] = { 0.5, 0.5, 0.5, 1 };
     GLfloat ambRocketTail[] = {1, 0, 0, 1};
-
-
+    GLfloat ambIsland[] = {0, 1, 0,1};
+    GLfloat ambCity[] = {0.5 , 0.5 , 0.5 , 1};
+    GLfloat ambCloud[] = {0.949, 0.984, 0.992,1};
+ 
 //Crtamo raketu
 void drawRocket()
 {
@@ -21,7 +23,7 @@ void drawRocket()
 
     //Rotiramo raketu 
     //Da bi se videlo kako cela raketa izgleda staviti glRotatef pod komentar
-    glRotatef(-110,1,0,0);
+    glRotatef(-70,1,0,0);
    
     glPushMatrix();
 
@@ -290,4 +292,88 @@ void drawObstacle(ObjectPosition op)
             //glutSolidCube(20);
             glutSolidSphere(10,25,25);
             glPopMatrix();
+}
+
+
+//Funcija za crtanje kruga oko grada
+void drawBackground(GLfloat radius,GLfloat height)
+{
+    GLfloat x              = 0.0;
+    GLfloat y              = 0.0;
+    GLfloat angle          = 0.0;
+    GLfloat angle_stepsize = 0.05;
+
+    glPushMatrix();
+        glMaterialfv(GL_BACK_LEFT, GL_AMBIENT, ambIsland);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, ambIsland  );
+        glMaterialf(GL_FRONT, GL_SHININESS, 15);
+        glMaterialfv(GL_FRONT,GL_SPECULAR, specular_coeffs);
+    glBegin(GL_POLYGON);
+    angle = 0.0;
+    int i= 0;
+        while( angle < 2*PI ) {
+            x = radius * cos(angle);
+            y = radius * sin(angle);
+            glVertex3f(x, y , 0.0);   
+            glNormal3f(x,y,0);
+            glNormal3f(x,y,-1);
+            glNormal3f(x,y,1);
+            angle = angle + angle_stepsize;
+            i++;
+        }
+
+    glEnd();
+
+    glNormal3f(x, y , 0.0);   
+   glPopMatrix();
+
+}
+
+// Funcija za crtanje cilja (mesto gde treba da padne raketa i gde se zavrsava nivo)
+void drawCity(ObjectPosition il,int buildingHeight)
+{
+        int i=0;
+        glPushMatrix();
+            glMaterialfv(GL_FRONT, GL_AMBIENT, ambCity);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, ambCity);
+           // glMaterialfv(GL_FRONT,GL_SPECULAR, specular_coeffs);
+            glMaterialf(GL_FRONT, GL_SHININESS, 15);
+            glTranslatef(il.x ,il.y,il.z);
+            glutSolidCube(25);
+
+                glPushMatrix();
+
+                    glMaterialfv(GL_FRONT, GL_AMBIENT, ambCity);
+                    glMaterialfv(GL_FRONT, GL_DIFFUSE, ambCity);
+
+                                for(i=0;i<buildingHeight;i++)
+            {
+                    glTranslatef(0,0,25);
+                    glutSolidCube(25);
+                    }
+                glPopMatrix();
+            
+        glPopMatrix();
+
+
+}
+
+
+
+// Funcija za crtanje oblaka
+void drawCloud(ObjectPosition cl)
+{
+
+        glPushMatrix();
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glTranslatef(0,0,2500);
+            glMaterialfv(GL_FRONT, GL_AMBIENT, ambCloud);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, ambCloud);
+            glMaterialfv(GL_FRONT,GL_SPECULAR, specular_coeffs);
+            glMaterialf(GL_FRONT, GL_SHININESS, 25);
+            glTranslatef(cl.x ,cl.y,cl.z);
+            glutSolidSphere(600,25,25);
+            
+        glPopMatrix();
+
 }
