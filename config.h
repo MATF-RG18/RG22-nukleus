@@ -7,14 +7,14 @@
 #include <GL/glut.h>
 
 //Struktura gde cuvamo koordinate prepreka
-typedef struct {
+typedef struct
+{
     int x;
     int y;
     int z;
-}ObjectPosition;
+} ObjectPosition;
 
 //Duzina nivoa
 extern int gameLength;
-
 
 #endif

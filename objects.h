@@ -7,10 +7,13 @@ void drawObstacle(ObjectPosition op);
 
 void drawRocket();
 
-void  drawCylinder(GLfloat radius,GLfloat height);
+void drawCylinder(GLfloat radius, GLfloat height);
 void drawHorizontalWing();
 void drawVerticalWing();
-void drawBackground(GLfloat radius,GLfloat height);
-void drawCity(ObjectPosition il,int buildingHeight);
+void drawBackground(GLfloat radius, GLfloat height);
+void drawCity(ObjectPosition il, int buildingHeight);
 void drawCloud(ObjectPosition cl);
+int collision(ObjectPosition obj, ObjectPosition player, int size);
+int collision2(ObjectPosition *obj, ObjectPosition player, int size, int radius);
+void drawMovingObstacle(ObjectPosition op);
 #endif
