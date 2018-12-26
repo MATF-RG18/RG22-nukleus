@@ -14,7 +14,7 @@ GLfloat ambRocketBottom[] = {0.5, 0.5, 0.5, 1};
 GLfloat ambRocketTail[] = {1, 0, 0, 1};
 GLfloat ambIsland[] = {0, 1, 0, 1};
 GLfloat ambCity[] = {0.5, 0.5, 0.5, 1};
-GLfloat ambCloud[] = {0.949, 0.984, 0.992, 1};
+GLfloat ambCloud[] = {0.949, 0.984, 0.992, 0.8};
 GLfloat ambObstacle2[] = {0,0, 0, 1};
 //Crtamo raketu
 void drawRocket()
@@ -35,28 +35,28 @@ void drawRocket()
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular_coeffs);
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 20);
     glRotatef(-90, 1, 0, 0);
-    glutSolidCone(5, 5, 25, 10);
+    glutSolidCone(3, 3, 25, 10);
 
     //Ovde crtamo telo rakete
     glPushMatrix();
 
     glRotatef(270, 1, 0, 0);
     glRotatef(-90, 1, 0, 0);
-
-    drawCylinder(5, 20);
+    //Crtamo telo rakete
+    drawCylinder(3, 18);
     glPopMatrix();
 
     // Ovde crtamo horizontalna krila
     glPushMatrix();
     glRotatef(90, 1, 0, 0);
-    glTranslatef(-8, -19, 0);
+    glTranslatef(-5, -17.5, -0.5);
     drawHorizontalWing();
     glPopMatrix();
 
     // Ovde crtamo vertikalna krila
     glPushMatrix();
     glRotatef(90, 1, 0, 0);
-    glTranslatef(-1, -19, -4);
+    glTranslatef(-1, -17.5, -2.5);
     drawVerticalWing();
     glPopMatrix();
 
@@ -119,7 +119,7 @@ void drawCylinder(GLfloat radius, GLfloat height)
     glPopMatrix();
 }
 
-// Funcija koja crta horizontalna krila. Sastoji se od 2 trougla
+// Funcija koja crta horizontalna krila. Sastoji se od 2 piramide
 void drawHorizontalWing()
 {
     glPushMatrix();
@@ -128,10 +128,10 @@ void drawHorizontalWing()
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular_coeffs);
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 15);
 
-    glScalef(8, 20, 1);
-
+    glScalef(5, 15, 1);
+    glTranslatef(0,0,0);
     glBegin(GL_TRIANGLES);
-
+    
     glVertex3f(1, 0, 0);
     glVertex3f(1, 0, 1);
     glVertex3f(0, 0, 0.5);
@@ -156,13 +156,15 @@ void drawHorizontalWing()
     glNormal3f(0, 0, 0.5);
     glNormal3f(1, 1, 0.5);
 
-    glVertex3f(1, 0, 0);
+    glVertex3f(0, 0, 0.5);
     glVertex3f(1, 0, 1);
     glVertex3f(1, 1, 0.5);
 
-    glNormal3f(1, 0, 0);
+    glNormal3f(0, 0, 0.5);
     glNormal3f(1, 0, 1);
     glNormal3f(1, 1, 0.5);
+
+    
     //Drugo krilo
 
     glVertex3f(1, 0, 0);
@@ -199,7 +201,7 @@ void drawHorizontalWing()
     glEnd();
     glPopMatrix();
 }
-//Funcija koja crta vertikalna krila. Sastoji se od 2 trougla
+//Funcija koja crta vertikalna krila. Sastoji se od 2 piramide
 void drawVerticalWing()
 {
     glPushMatrix();
@@ -208,7 +210,7 @@ void drawVerticalWing()
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular_coeffs);
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 15);
 
-    glScalef(1, 20, 8);
+    glScalef(1, 15, 5);
     //Trece krilo
     glBegin(GL_TRIANGLES);
     glVertex3f(0.5, 0, 0.5);
@@ -293,26 +295,20 @@ void drawBackground(GLfloat radius, GLfloat height)
     GLfloat x = 0.0;
     GLfloat y = 0.0;
     GLfloat angle = 0.0;
-    GLfloat angle_stepsize = 0.05;
-
+    glTranslatef(0,0,0);
     glPushMatrix();
     glMaterialfv(GL_BACK_LEFT, GL_AMBIENT, ambIsland);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, ambIsland);
     glMaterialf(GL_FRONT, GL_SHININESS, 15);
     glMaterialfv(GL_FRONT, GL_SPECULAR, specular_coeffs);
     glBegin(GL_POLYGON);
-    angle = 0.0;
-    int i = 0;
-    while (angle < 2 * PI)
+    //int i = 0;
+    for(angle=0;angle<2*PI;angle+=PI/15)
     {
-        x = radius * cos(angle);
-        y = radius * sin(angle);
-        glVertex3f(x, y, 0.0);
-        glNormal3f(x, y, 0);
-        glNormal3f(x, y, -1);
-        glNormal3f(x, y, 1);
-        angle = angle + angle_stepsize;
-        i++;
+        glVertex3f(radius*cos(angle), radius*sin(angle), 1);
+        glNormal3f(radius*cos(angle), radius*sin(angle), 1);
+        glNormal3f(radius*cos(angle+PI/50), radius*sin(angle+PI/50), 1);
+        //glNormal3f(x, y, 1);
     }
 
     glEnd();
@@ -321,7 +317,7 @@ void drawBackground(GLfloat radius, GLfloat height)
     glPopMatrix();
 }
 
-// Funcija za crtanje cilja (mesto gde treba da padne raketa i gde se zavrsava nivo)
+// Funckija za crtanje cilja (mesto gde treba da padne raketa i gde se zavrsava nivo)
 void drawCity(ObjectPosition il, int buildingHeight)
 {
     int i = 0;
@@ -348,7 +344,7 @@ void drawCity(ObjectPosition il, int buildingHeight)
     glPopMatrix();
 }
 
-// Funcija za crtanje oblaka
+// Funckija za crtanje oblaka
 void drawCloud(ObjectPosition cl)
 {
 
@@ -366,7 +362,7 @@ void drawCloud(ObjectPosition cl)
 }
 
 
-// Funcija za detekciju kolizije. 
+// Funckija za detekciju kolizije. (relativno optimizovana)
 int collision2(ObjectPosition *obj, ObjectPosition player, int size, int radius)
 {
     int j;
@@ -383,7 +379,7 @@ int collision2(ObjectPosition *obj, ObjectPosition player, int size, int radius)
         if (obj[j].z - 50 > player.z)
             skip++;
 
-        printf("Obj : %d %d %d \nPlayer: %d %d %d \n",obj[j].x, obj[j].y, obj[j].z, player.x,player.y,player.z);
+       
 
         dist = sqrt(pow(dz, 2) + pow(dx, 2) + pow(dy, 2));
 
@@ -393,6 +389,30 @@ int collision2(ObjectPosition *obj, ObjectPosition player, int size, int radius)
     }
     return 1;
 }
+// Funkcija za detekciju kolizije kod oblaka 
+int collisionC(ObjectPosition *obj, ObjectPosition player, int size, int radius)
+{
+    int j;
+    float dx, dy, dz;
+    float dist = 0;
+
+    for (j = 0; j < size; j++)
+    {
+        dz = player.z - obj[j].z - 15;
+        dx = player.x - obj[j].x;
+        dy = player.y - obj[j].y;
+        dist = sqrt(pow(dz, 2) + pow(dx, 2) + pow(dy, 2));
+
+        //printf("%f\n",dist);
+        if (dist <= radius)
+            return -1;
+    }
+    return 1;
+}
+
+
+
+
 // Crtamo prepreke koje se krecu
 void drawMovingObstacle(ObjectPosition op)
 {

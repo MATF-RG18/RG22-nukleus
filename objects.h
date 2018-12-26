@@ -16,4 +16,6 @@ void drawCloud(ObjectPosition cl);
 int collision(ObjectPosition obj, ObjectPosition player, int size);
 int collision2(ObjectPosition *obj, ObjectPosition player, int size, int radius);
 void drawMovingObstacle(ObjectPosition op);
+int collisionC(ObjectPosition *obj, ObjectPosition player, int size, int radius);
+
 #endif

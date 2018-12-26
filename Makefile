@@ -1,6 +1,7 @@
- 
+
+ENV = UNIX
 PROGRAM = Nukleus
-OBJFILES = config.o objects.o main.o
+OBJFILES = config.o objects.o image.o main.o
 CC      = gcc
 CFLAGS  = -g -Wall -I/usr/X11R6/include -I/usr/pkg/include
 LDFLAGS = -L/usr/X11R6/lib -L/usr/pkg/lib

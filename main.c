@@ -1,29 +1,47 @@
 #include "config.h"
+#include "image.h"
 #include "objects.h"
-#include <sys/time.h>
-#include <sys/types.h>
+
 #define PI 3.1415927
 
 #define TIMERMSECS 30
-#define TRARATE (20)
+#define TRARATE (5)
 #define A_WIDTH 600
 #define A_HEIGHT 600
+
+
+// Slika je preuzeta sa https://opengameart.org
+// fajlovi image.c i image.h su preuzeti sa asistentovog sajta : http://poincare.matf.bg.ac.rs/~bozidar_antic/rg/cas7/Cas7.zip
+#define WATERTEXTURE "tex_Water.bmp"
+#define SKYTEXTURE "sky.bmp"
+//Identifikatori tekstura
+static GLuint textures[5];
+
 //Uslov za kretanje animacije
 static int m = 0;
-//Faza igrice
+// Faza igrice
 // phase == 0 -> pocetna animacija
 // phase == 1 -> pocetak igrice
-static int phase = 1;
+static int phase = 0;
 
 // Promenljiva za kretanje po z osi
 static GLfloat tra = 0.0f;
-static int r1 = 0, r2 = 0, r3 = 0, rf1 = 0, rf2 = 0, rf3 = 0, orgCl = 0;
+static GLfloat traSpeed = 0.01f;
+// Pomocne promenljive za generisanje oblaka
+static int r1 = 0, r2 = 0, rf1 = 0, rf2 = 0;
 static int i = 0;
+// Ako zelimo da preskocimo animaciju
+static int flagSkip = 0;
+const int gln = 10000;
+// Osvetljenje koje koristimo kada dodje do kolizije sa oblakom
+GLfloat light_ambient1[] = {0.1f, 0.1f, 0.1f, 0.8};
+GLfloat light_diffuse1[] = {0.2f, 0.1f, 0.1f, 1};
+GLfloat light_specular1[] = {0.9, 0.9, 0.9, 0.4};
+//GLfloat light_position1[] = {-1, -1, 0.5, 1};
+GLfloat light_position1[] = {7000, 7000,7000, 0.9};
 
-GLfloat light_ambient1[] = {0.1f, 0.1f, 0.8f, 1};
-GLfloat light_diffuse1[] = {0.8f, 0.4f, 0.2f, 1};
-GLfloat light_specular1[] = {1, 1, 1, 0.4};
-GLfloat light_position1[] = {-1, -1, 0.5, 1};
+GLfloat light_ambient3[] = {0.337, 0.501, 0.784, 0};
+
 //Raketa
 ObjectPosition player;
 
@@ -48,13 +66,10 @@ static void on_reshape(int width, int height);
 static void on_timer(int value);
 static void on_display(void);
 
-// Funcija za poredjenje pozicija po z osi
-int compare(const void *s1, const void *s2)
-{
-    ObjectPosition *op1 = (ObjectPosition *)s1;
-    ObjectPosition *op2 = (ObjectPosition *)s2;
-    return op2->z - op1->z;
-}
+
+// Inicijalizujemo teksturu
+void textureInit(Image * image,char * filename,int pointer);
+void drawSkybox(int size,int n);
 
 int main(int argc, char **argv)
 {
@@ -63,7 +78,6 @@ int main(int argc, char **argv)
     GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1};
     GLfloat light_diffuse[] = {0.8f, 0.8f, 0.8f, 1};
     GLfloat light_specular[] = {1, 1, 1, 0.4};
-    //GLfloat model_ambient[] = { 0.1, 0, 0, 1 };
     GLfloat light_position[] = {-1, -1, 0.5, 1};
 
     //Punimo pocetne koordinate igraca
@@ -127,9 +141,9 @@ int main(int argc, char **argv)
             cl[oo].z += gameLength/3;
         }
         cl[oo].z += 2500;
-
     }
-    //qsort(cl, 50, sizeof(ObjectPosition), compare);
+    qsort(cl, 20, sizeof(ObjectPosition), compare);
+
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
@@ -142,10 +156,21 @@ int main(int argc, char **argv)
     glutReshapeFunc(on_reshape);
     glutDisplayFunc(on_display);
 
-    glClearColor(0.337, 0.501, 0.784, 0);
+
+    //Omogucujemo dubinu,culling i blend
     glEnable(GL_DEPTH_TEST);
-    //  glEnable(GL_CULL_FACE);
+//    glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
+    glEnable(GL_NORMALIZE);
+    glShadeModel(GL_GEOMETRY_SHADER);
+ 
+    // Omugucavamo 2D teksture
+    glEnable(GL_TEXTURE_2D);
+    glTexEnvf(GL_TEXTURE_ENV,
+              GL_TEXTURE_ENV_MODE,
+              GL_REPLACE);
+
+
     // Postavlja se tajmer
     glutTimerFunc(TIMERMSECS, on_timer, 0);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -156,8 +181,26 @@ int main(int argc, char **argv)
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
     glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+    // Postavljamo svetlo plavu kao boju pozadine
+    //glClearColor(0.337, 0.501, 0.784, 0);
+    glClearColor(0.466, 0.764, 0.831, 0);
+
+    // Kreiramo teksturu
+    Image * image;
+    image = image_init(0, 0);
+
+    //Generisemo identifikatore tekstura
+    glGenTextures(5, textures);
+    // Kreiramo teksturu koja predstavlja vodu
+    textureInit(image,WATERTEXTURE,0);
+    textureInit(image,SKYTEXTURE,1);
+    textureInit(image,SKYTEXTURE,2);
+    textureInit(image,SKYTEXTURE,3);
+    textureInit(image,SKYTEXTURE,4);
+    //Unistavamo objekat za citanje tekstura iz fajla
+    image_done(image);
 
     glutMainLoop();
 
@@ -169,9 +212,21 @@ static void on_keyboard(unsigned char key, int x, int y)
     switch (key)
     {
     case 27:
-        // Zavrsava se program
-        exit(0);
+        // Mozemo da kliknemo ESC da preskocimo pocetnu animaciju. Nakon toga se na ESC zavrsava program
+        if(!flagSkip)
+        {
+            flagSkip = 1;
+            phase = 1;
+            //m=0;
+            tra=0;
+        }
+        else 
+        {
+            //Zavrsava se program
+            exit(0);
+        }
         break;
+        
 
     case 'd':
         if (player.x >= 175)
@@ -206,13 +261,20 @@ static void on_keyboard(unsigned char key, int x, int y)
         }
         player.y -= 2.5;
         break;
-    case 'k':
-        // Pocinjemo nivo
-        tra = 0;
-        m = 1;
-        // Resetujemo tajmer
-        glutTimerFunc(TIMERMSECS, on_timer, 0);
+    case 32:
+        // Pocinjemo nivo.  32 -> spacebar
+        // Na spacebar mozemo i da resetujemo nivo kada dodjemo do kolizije
+        if(m==0)
+        {
+            tra = 0;
+            traSpeed = 0.01;
+            m = 1;
+            // Resetujemo tajmer
+            glutTimerFunc(TIMERMSECS, on_timer, 0);
+            
+        }
         break;
+
     }
 }
 
@@ -224,8 +286,11 @@ static void on_timer(int value)
 
         // Postavlja se tajmer
         glutTimerFunc(TIMERMSECS, on_timer, 0);
-
+        //tra koristimo za kretanje po Z osi
         tra += TRARATE;
+        // traSpeed uveca brzinu kretanja dok prolazi vreme
+        tra += traSpeed;
+        traSpeed += 0.03;
         // Forsiranje ponovnog iscrtavanja
         glutPostRedisplay();
     }
@@ -239,13 +304,19 @@ static void on_reshape(int width, int height)
     // Postavlja se projekcija
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60, (float)width / height, 1, 5000);
+    gluPerspective(60, (float)width / height, 1, 15000);
 }
 
 static void on_display(void)
 {
     // Postavlja se boja
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.541, 0.8, 0.858,0);
+    // Omogucava da kada smo u fazi igranja da ESC ne resetuje nivo kada se prvi put klikne
+    if(phase==1)
+    {
+        flagSkip = 1;
+    }
 
     // Na osnovu ovoga menjamo faze
     if (tra > gameLength)
@@ -259,6 +330,7 @@ static void on_display(void)
         else
             m = 0;
     }
+    
     // Postavlja se vidna tacka
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -271,15 +343,65 @@ static void on_display(void)
     else
         gluLookAt(player.x, player.y, gameLength - tra, 0, 0, 0, 0, 1, 0);
 
-    //drawBackground(400,addOnX,addOnY);
+
+    //Crtamo grad
     for (i = 0; i < 100; i++)
     {
         drawCity(il[i], buildingHeight[i]);
     }
 
+ 
 
-    drawBackground(250, 50);
-    //drawBackground(900,40);
+    // Crtamo vodu
+    glPushMatrix();
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(-4000, -4000, -1);
+
+        glTexCoord2f(0, 10);
+        glVertex3f(4000, -4000, -1);
+
+        glTexCoord2f(10, 10);
+        glVertex3f(4000, 4000, -1);
+
+        glTexCoord2f(10, 0);
+        glVertex3f(-4000, 4000, -1);
+    glEnd();
+    glPopMatrix();
+
+    //Crtamo skybox
+    drawSkybox(4000,1);
+
+    /*
+    
+    glPushMatrix();    
+    glBindTexture(GL_TEXTURE_2D, textures[5]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(-3000, -3000, gameLength-tra-4000);
+
+        glTexCoord2f(0, 1);
+        glVertex3f(3000, -3000, gameLength-tra-4000);
+
+        glTexCoord2f(1, 1);
+        glVertex3f(3000, 3000, gameLength-tra-4000);
+
+        glTexCoord2f(1, 0);
+        glVertex3f(-3000, 3000, gameLength-tra-4000);
+    glEnd();
+    glPopMatrix();
+    */
+
+    // Iskljucujemo aktivnu teksturu 
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Crtamo ostrvo (krug oko grada)
+    drawBackground(400, 50);
     
     // Crtamo 1000 objekata koji ce biti prepreka
     if (phase == 1)
@@ -382,7 +504,7 @@ static void on_display(void)
     //Pomeramo raketu
     if (phase == 1)
     {
-
+        //Transliramo raketu za -tra. Azuriramo koordinate igraca
         glTranslatef(0, 0, -tra);
         glTranslatef(0, player.y, 0);
         glTranslatef(player.x, 0, 0);
@@ -390,9 +512,9 @@ static void on_display(void)
         // Azuriramo z koordinate
         player.z = gameLength - 50;
         player.z = player.z - tra;
-        /*
+        
         // Testiramo da li je doslo do kolizije sa preprekama
-        if (collision2(op, player, 1000, 15) <= 0)
+        if (collision2(op, player, 1000, 20) <= 0)
         {
             m = 0;
         }
@@ -402,18 +524,20 @@ static void on_display(void)
         {
             m = 0;
         }
-        */
+        
         // Testiramo da li je doslo do kolizije sa oblacima
-        if (collision2(cl, player, 20, 500) <= 0)
+        if (collision2(cl, player, 20, 300) <= 0)
         {
-            m = 1;
-            glDisable(GL_LIGHT0);
 
+            // Ako je doslo do kolizije iskljucujemo LIGHT0 i ukljucujemo LIGHT1
+            
+            glDisable(GL_LIGHT0);
             glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient1);
             glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse1);
             glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular1);
             glLightfv(GL_LIGHT1, GL_POSITION, light_position1);
             glEnable(GL_LIGHT1);
+            
         }
         else 
         {
@@ -423,8 +547,127 @@ static void on_display(void)
     }
     // Crtamo raketu
 
-    drawRocket();
-
+    glPushMatrix();
+        drawRocket();
+    glPopMatrix();
     // Postavlja se nova slika u prozor
     glutSwapBuffers();
+}
+
+
+// Ucitavamo teksturu
+void textureInit(Image * image,char * filename,int pointer)
+{
+
+    // Ucitavamo image i podesavamo parametre
+    image_read(image,filename);
+    glBindTexture(GL_TEXTURE_2D, textures[pointer]);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                 image->width, image->height, 0,
+                 GL_RGB, GL_UNSIGNED_BYTE, image->pixels);
+
+    //Iskljucujemo aktivnu teksturu 
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+// Crtamo skybox. Size oznacava velicinu kocke. N oznacava kolko cemo slika imati u teksturi
+void drawSkybox(int size,int n)
+{
+    // Crtamo box 1
+    glPushMatrix();
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(-size, 0, gameLength);
+
+        glTexCoord2f(0, n);
+        glVertex3f(-size, 0, 0);
+
+        glTexCoord2f(n, n);
+        glVertex3f(0, size, 0);
+
+        glTexCoord2f(n, 0);
+        glVertex3f(0, size, gameLength);
+    glEnd();
+    glPopMatrix();
+
+    // Crtamo box 2
+    glPushMatrix();
+    
+    glBindTexture(GL_TEXTURE_2D, textures[2]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(size, 0, gameLength);
+
+        glTexCoord2f(0, n);
+        glVertex3f(size, 0, 0);
+
+        glTexCoord2f(n, n);
+        glVertex3f(0, size, 0);
+
+        glTexCoord2f(n, 0);
+        glVertex3f(0, size, gameLength);
+    glEnd();
+    glPopMatrix();
+    // Crtamo box 3
+    glPushMatrix();
+    
+    glBindTexture(GL_TEXTURE_2D, textures[3]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(size, 0, gameLength);
+
+        glTexCoord2f(0, n);
+        glVertex3f(size, 0, 0);
+
+        glTexCoord2f(1, n);
+        glVertex3f(0, -size, 0);
+
+        glTexCoord2f(n, 0);
+        glVertex3f(0, -size, gameLength);
+    glEnd();
+    glPopMatrix();
+
+    // Crtamo box 4
+    glPushMatrix();
+    
+    glBindTexture(GL_TEXTURE_2D, textures[4]);
+    glBegin(GL_QUADS);
+        glNormal3f(20, 20, 12000);
+
+        glTexCoord2f(0, 0);
+        glVertex3f(-size, 0, gameLength);
+
+        glTexCoord2f(0, n);
+        glVertex3f(-size, 0, 0);
+
+        glTexCoord2f(n, n);
+        glVertex3f(0, -size, 0);
+
+        glTexCoord2f(n, 0);
+        glVertex3f(0, -size, gameLength);
+    glEnd();
+    glPopMatrix();
+
+
+
+
+
+
+
 }
